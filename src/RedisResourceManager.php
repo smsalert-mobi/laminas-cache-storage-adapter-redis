@@ -331,7 +331,7 @@ final class RedisResourceManager
     {
         if (!empty($resource['masterName'])) {
             $server = $resource['server'];
-            $sentinel = new RedisSentinel($server['host'], $server['port']);
+            $sentinel = new RedisSentinel(['host' => $server['host'], 'port' => $server['port']]);
             $redisServer = $sentinel->getMasterAddrByName($resource['masterName']);
 
             if (!$redisServer) {
