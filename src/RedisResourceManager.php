@@ -9,6 +9,7 @@ use Laminas\Cache\Storage\Adapter\Exception\RedisRuntimeException;
 use Laminas\Stdlib\ArrayUtils;
 use Redis as RedisResource;
 use RedisException as RedisResourceException;
+use RedisSentinel;
 use ReflectionClass;
 use Traversable;
 
@@ -293,6 +294,8 @@ final class RedisResourceManager
         assert($redis instanceof RedisResource);
 
         try {
+            $this->pickMasterNode($resource);
+
             if (($resource['persistent_id'] ?? '') !== '') {
                 //connect or reuse persistent connection
                 $success = $redis->pconnect(
@@ -321,6 +324,22 @@ final class RedisResourceManager
             $redis->select($resource['database']);
         } catch (RedisResourceException $exception) {
             throw RedisRuntimeException::fromRedisException($exception, $redis);
+        }
+    }
+
+    protected function pickMasterNode(&$resource)
+    {
+        if (!empty($resource['masterName'])) {
+            $server = $resource['server'];
+            $sentinel = new RedisSentinel($server['host'], $server['port']);
+            $redisServer = $sentinel->getMasterAddrByName($resource['masterName']);
+
+            if (!$redisServer) {
+                throw new Exception\RuntimeException('Could pick a master server');
+            }
+
+            $resource['server']['host'] = $redisServer[0];
+            $resource['server']['port'] = $redisServer[1];
         }
     }
 
@@ -637,6 +656,38 @@ final class RedisResourceManager
         }
 
         return $this;
+    }
+
+    /**
+     * @param $id
+     * @param $masterName
+     * @return $this
+     */
+    public function setMasterName($id, $masterName)
+    {
+        if (! $this->hasResource($id)) {
+            return $this->setResource($id, [
+                'masterName' => $masterName,
+            ]);
+        }
+
+        $resource                = &$this->resources[$id];
+        $resource['masterName']  = $masterName;
+        return $this;
+    }
+
+    /**
+     * @param string $id
+     * @return string
+     */
+    public function getMasterName($id)
+    {
+        if (! $this->hasResource($id)) {
+            throw new Exception\RuntimeException("No resource with id '{$id}'");
+        }
+
+        $resource = &$this->resources[$id];
+        return $resource['masterName'];
     }
 
     /**
