@@ -351,7 +351,7 @@ final class RedisResourceManager
             }
 
             $resource['master_server']['host'] = $redisServer[0];
-            $resource['master_server']['port'] = $redisServer[1];
+            $resource['master_server']['port'] = (int) $redisServer[1];
         }
     }
 
