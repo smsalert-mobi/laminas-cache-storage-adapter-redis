@@ -299,18 +299,25 @@ final class RedisResourceManager
             if (($resource['persistent_id'] ?? '') !== '') {
                 //connect or reuse persistent connection
                 $success = $redis->pconnect(
-                    $server['host'],
-                    $server['port'],
+                    $resource['master_server']['host'] ?? $server['host'],
+                    $resource['master_server']['port'] ?? $server['port'],
                     $server['timeout'],
                     $resource['persistent_id']
                 );
             } elseif ($server['port']) {
-                $success = $redis->connect($server['host'], $server['port'], $server['timeout']);
+                $success = $redis->connect(
+                    $resource['master_server']['host'] ?? $server['host'],
+                    $resource['master_server']['port'] ?? $server['port'],
+                    $server['timeout']
+                );
             } elseif ($server['timeout']) {
                 //connect through unix domain socket
-                $success = $redis->connect($server['host'], $server['timeout']);
+                $success = $redis->connect(
+                    $resource['master_server']['host'] ?? $server['host'],
+                    $server['timeout']
+                );
             } else {
-                $success = $redis->connect($server['host']);
+                $success = $redis->connect($resource['master_server']['host'] ?? $server['host']);
             }
 
             if (! $success) {
@@ -331,15 +338,20 @@ final class RedisResourceManager
     {
         if (!empty($resource['masterName'])) {
             $server = $resource['server'];
-            $sentinel = new RedisSentinel(['host' => $server['host'], 'port' => $server['port']]);
+            $sentinel = new RedisSentinel(
+                [
+                    'host' => $server['host'],
+                    'port' => $server['port'],
+                ]
+            );
             $redisServer = $sentinel->getMasterAddrByName($resource['masterName']);
 
             if (!$redisServer) {
                 throw new Exception\RuntimeException('Could pick a master server');
             }
 
-            $resource['server']['host'] = $redisServer[0];
-            $resource['server']['port'] = $redisServer[1];
+            $resource['master_server']['host'] = $redisServer[0];
+            $resource['master_server']['port'] = $redisServer[1];
         }
     }
 
