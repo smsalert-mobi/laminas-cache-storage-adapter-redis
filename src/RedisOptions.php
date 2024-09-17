@@ -219,6 +219,24 @@ final class RedisOptions extends AdapterOptions
     }
 
     /**
+     * @param string $masterName
+     * @return RedisOptions Provides a fluent interface
+     */
+    public function setMasterName($masterName)
+    {
+        $this->getResourceManager()->setMasterName($this->getResourceId(), $masterName);
+        return $this;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getMasterName()
+    {
+        return $this->getResourceManager()->getMasterName($this->getResourceId());
+    }
+
+    /**
      * Set resource database number
      *
      * @param int $database Database number
